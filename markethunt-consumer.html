@@ -235,6 +235,40 @@
         color: var(--muted);
         font-size: 0.85rem;
       }
+
+      table.latest-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      table.latest-table th,
+      table.latest-table td {
+        text-align: left;
+        padding: 0.6rem 0.7rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      table.latest-table th {
+        color: var(--muted);
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      table.latest-table th.sorted {
+        color: var(--accent);
+      }
+
+      table.latest-table td.price,
+      table.latest-table th.price-col {
+        text-align: right;
+      }
+
+      table.latest-table tr:hover td {
+        background: var(--card-hover);
+      }
     </style>
   </head>
   <body>
@@ -264,6 +298,24 @@
       </section>
 
       <section class="panel">
+        <h2 style="margin: 0 0 0.75rem; font-size: 1.05rem;">Latest Prices</h2>
+        <div id="latest-empty" class="empty-state" style="padding: 1.5rem 1rem;">
+          Add items above to see their latest prices here.
+        </div>
+        <table id="latest-table" class="latest-table" style="display: none;">
+          <thead>
+            <tr>
+              <th data-sort="name">Item</th>
+              <th data-sort="price" class="price-col">Gold Price</th>
+              <th data-sort="sb_price" class="price-col sorted">SB Price</th>
+              <th data-sort="date" class="price-col">Updated</th>
+            </tr>
+          </thead>
+          <tbody id="latest-tbody"></tbody>
+        </table>
+      </section>
+
+      <section class="panel">
         <div class="controls">
           <label for="range">Range</label>
           <select id="range">
@@ -276,8 +328,8 @@
 
           <label for="metric">Price in</label>
           <select id="metric">
-            <option value="price" selected>Gold</option>
-            <option value="sb_price">SB (SUPER|brie+)</option>
+            <option value="price">Gold</option>
+            <option value="sb_price" selected>SB (SUPER|brie+)</option>
           </select>
 
           <div class="toggle-group" id="mode-toggle">
@@ -321,14 +373,19 @@
       const logScaleEl = document.getElementById("log-scale");
       const logScaleLabel = document.getElementById("log-scale-label");
 
-      const DEFAULT_ITEM_IDS = [926, 4088, 2619, 3075, 114, 4080, 3447];
+      const DEFAULT_ITEM_IDS = [926, 4088, 2619, 3075, 114, 4080, 3447, 1733];
+
+      const latestEmptyEl = document.getElementById("latest-empty");
+      const latestTableEl = document.getElementById("latest-table");
+      const latestTbodyEl = document.getElementById("latest-tbody");
 
       let selectedItems = []; // { item_id, name }
       let seriesCache = {}; // item_id -> [{date, price, sb_price}]
       let mode = "pct";
-      let metric = "price";
+      let metric = "sb_price";
       let chart = null;
       let searchDebounce = null;
+      let latestSort = { key: "sb_price", dir: "desc" };
 
       function setStatus(msg, isError) {
         statusEl.textContent = msg || "";
@@ -467,6 +524,66 @@
         });
       }
 
+      function renderLatestTable(latestByItem) {
+        const rows = selectedItems
+          .map((item) => {
+            const latest = latestByItem[item.item_id];
+            return {
+              name: item.name,
+              price: latest ? latest.price : null,
+              sb_price: latest ? latest.sb_price : null,
+              date: latest ? latest.date : null,
+            };
+          })
+          .filter((r) => r.date != null);
+
+        if (!rows.length) {
+          latestEmptyEl.style.display = "block";
+          latestTableEl.style.display = "none";
+          return;
+        }
+
+        const { key, dir } = latestSort;
+        rows.sort((a, b) => {
+          let av = a[key];
+          let bv = b[key];
+          if (av == null) av = dir === "asc" ? Infinity : -Infinity;
+          if (bv == null) bv = dir === "asc" ? Infinity : -Infinity;
+          if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+          return dir === "asc" ? av - bv : bv - av;
+        });
+
+        latestEmptyEl.style.display = "none";
+        latestTableEl.style.display = "table";
+        latestTbodyEl.innerHTML = "";
+        rows.forEach((r) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.name}</td>
+            <td class="price">${r.price != null ? r.price.toLocaleString() + "g" : "—"}</td>
+            <td class="price">${r.sb_price != null ? r.sb_price.toLocaleString() + " sb" : "—"}</td>
+            <td class="price">${r.date ? new Date(r.date).toLocaleDateString() : "—"}</td>
+          `;
+          latestTbodyEl.appendChild(tr);
+        });
+
+        document.querySelectorAll("#latest-table th[data-sort]").forEach((th) => {
+          th.classList.toggle("sorted", th.dataset.sort === key);
+        });
+      }
+
+      document.querySelectorAll("#latest-table th[data-sort]").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.sort;
+          if (latestSort.key === key) {
+            latestSort.dir = latestSort.dir === "asc" ? "desc" : "asc";
+          } else {
+            latestSort = { key, dir: key === "name" ? "asc" : "desc" };
+          }
+          refreshChart();
+        });
+      });
+
       async function refreshChart() {
         if (!selectedItems.length) {
           emptyEl.style.display = "block";
@@ -474,18 +591,24 @@
             chart.destroy();
             chart = null;
           }
+          latestEmptyEl.style.display = "block";
+          latestTableEl.style.display = "none";
           return;
         }
         emptyEl.style.display = "none";
         setStatus("Loading…");
         try {
           const seriesByItem = {};
+          const latestByItem = {};
           await Promise.all(
             selectedItems.map(async (item) => {
               const full = await fetchItemHistory(item.item_id);
               seriesByItem[item.item_id] = filterByRange(full, rangeEl.value);
+              latestByItem[item.item_id] = full.length ? full[full.length - 1] : null;
             })
           );
+
+          renderLatestTable(latestByItem);
 
           const datasets = buildDatasets(seriesByItem);
 
