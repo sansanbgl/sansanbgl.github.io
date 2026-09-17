@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MouseHunt market data visualizer, built on the Markethunt API." />
+    <title>Markethunt Consumer | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .search-row {
+        position: relative;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        min-width: 200px;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        color: var(--text);
+        font-size: 0.95rem;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .results {
+        position: absolute;
+        top: calc(100% + 0.4rem);
+        left: 0;
+        right: 0;
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        max-height: 280px;
+        overflow-y: auto;
+        z-index: 10;
+        display: none;
+      }
+
+      .results.open {
+        display: block;
+      }
+
+      .result-item {
+        padding: 0.6rem 0.9rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        font-size: 0.9rem;
+      }
+
+      .result-item:hover {
+        background: var(--card-hover);
+      }
+
+      .result-item .price {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.5rem 0.35rem 0.8rem;
+        background: var(--accent-soft);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 999px;
+        font-size: 0.85rem;
+      }
+
+      .chip button {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0.1rem 0.3rem;
+        border-radius: 50%;
+      }
+
+      .chip button:hover {
+        color: var(--danger);
+        background: rgba(248, 113, 113, 0.15);
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 1.25rem;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .controls select {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-left: auto;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .chart-wrap {
+        position: relative;
+        height: 420px;
+        margin-top: 1rem;
+      }
+
+      .empty-state {
+        text-align: center;
+        color: var(--muted);
+        padding: 3rem 1rem;
+        font-size: 0.95rem;
+      }
+
+      .status {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 0.75rem;
+        min-height: 1.2em;
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+        <a href="https://api.markethunt.win/" target="_blank" rel="noreferrer">Markethunt API ↗</a>
+      </nav>
+
+      <header>
+        <h1>Markethunt Consumer</h1>
+        <p>Compare MouseHunt marketplace item prices over time, powered by the public Markethunt API.</p>
+      </header>
+
+      <section class="panel">
+        <div class="search-row">
+          <input
+            id="search"
+            type="text"
+            placeholder="Search for an item (e.g. Rare Map Dust, SUPER|brie+)…"
+            autocomplete="off"
+          />
+          <div id="results" class="results"></div>
+        </div>
+        <div id="chips" class="chips"></div>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section class="panel">
+        <div class="controls">
+          <label for="range">Range</label>
+          <select id="range">
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+            <option value="180">180 days</option>
+            <option value="365">1 year</option>
+            <option value="all">All time</option>
+          </select>
+
+          <label for="metric">Price in</label>
+          <select id="metric">
+            <option value="price" selected>Gold</option>
+            <option value="sb_price">SB (SUPER|brie+)</option>
+          </select>
+
+          <div class="toggle-group" id="mode-toggle">
+            <button data-mode="pct" class="active">% Change</button>
+            <button data-mode="raw">Raw Price</button>
+          </div>
+
+          <label id="log-scale-label" style="display: none; align-items: center; gap: 0.35rem;">
+            <input type="checkbox" id="log-scale" />
+            Log scale
+          </label>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+          <div id="empty" class="empty-state">
+            Search and add items above to see their price history here.
+          </div>
+        </div>
+      </section>
+
+      <footer>Data via <a href="https://api.markethunt.win/" target="_blank" rel="noreferrer" style="color: var(--accent)">api.markethunt.win</a>. Not affiliated with Markethunt.</footer>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+      const API_BASE = "https://api.markethunt.win";
+      const PALETTE = ["#38bdf8", "#818cf8", "#f472b6", "#34d399", "#fbbf24", "#fb7185", "#a78bfa", "#4ade80"];
+      const MAX_ITEMS = 8;
+
+      const searchInput = document.getElementById("search");
+      const resultsEl = document.getElementById("results");
+      const chipsEl = document.getElementById("chips");
+      const statusEl = document.getElementById("status");
+      const rangeEl = document.getElementById("range");
+      const metricEl = document.getElementById("metric");
+      const modeToggle = document.getElementById("mode-toggle");
+      const emptyEl = document.getElementById("empty");
+      const canvas = document.getElementById("chart");
+      const logScaleEl = document.getElementById("log-scale");
+      const logScaleLabel = document.getElementById("log-scale-label");
+
+      const DEFAULT_ITEM_IDS = [926, 4088, 2619, 3075, 114, 4080, 3447];
+
+      let selectedItems = []; // { item_id, name }
+      let seriesCache = {}; // item_id -> [{date, price, sb_price}]
+      let mode = "pct";
+      let metric = "price";
+      let chart = null;
+      let searchDebounce = null;
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg || "";
+        statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+      }
+
+      async function searchItems(query) {
+        const res = await fetch(`${API_BASE}/items/search?query=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+        return res.json();
+      }
+
+      async function fetchItemHistory(itemId) {
+        if (seriesCache[itemId]) return seriesCache[itemId];
+        const res = await fetch(`${API_BASE}/items/${itemId}`);
+        if (!res.ok) throw new Error(`Failed to load item ${itemId} (${res.status})`);
+        const data = await res.json();
+        const series = (data.market_data || [])
+          .filter((d) => d.price != null)
+          .map((d) => ({ date: d.date, price: d.price, sb_price: d.sb_price }));
+        seriesCache[itemId] = series;
+        return series;
+      }
+
+      function renderResults(items) {
+        resultsEl.innerHTML = "";
+        if (!items.length) {
+          resultsEl.classList.remove("open");
+          return;
+        }
+        items.slice(0, 12).forEach((entry) => {
+          const info = entry.item_info;
+          const latest = entry.latest_market_data;
+          const row = document.createElement("div");
+          row.className = "result-item";
+          row.innerHTML = `<span>${info.name}</span><span class="price">${
+            latest ? latest.price.toLocaleString() + "g" : "—"
+          }</span>`;
+          row.addEventListener("click", () => addItem(info.item_id, info.name));
+          resultsEl.appendChild(row);
+        });
+        resultsEl.classList.add("open");
+      }
+
+      searchInput.addEventListener("input", () => {
+        const q = searchInput.value.trim();
+        clearTimeout(searchDebounce);
+        if (q.length < 2) {
+          resultsEl.classList.remove("open");
+          return;
+        }
+        searchDebounce = setTimeout(async () => {
+          try {
+            const items = await searchItems(q);
+            renderResults(items);
+          } catch (err) {
+            setStatus(err.message, true);
+          }
+        }, 250);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!resultsEl.contains(e.target) && e.target !== searchInput) {
+          resultsEl.classList.remove("open");
+        }
+      });
+
+      function renderChips() {
+        chipsEl.innerHTML = "";
+        selectedItems.forEach((item, i) => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.style.borderColor = PALETTE[i % PALETTE.length] + "55";
+          chip.innerHTML = `<span style="color:${PALETTE[i % PALETTE.length]}">●</span> ${item.name}`;
+          const btn = document.createElement("button");
+          btn.textContent = "×";
+          btn.title = "Remove";
+          btn.addEventListener("click", () => removeItem(item.item_id));
+          chip.appendChild(btn);
+          chipsEl.appendChild(chip);
+        });
+      }
+
+      async function addItem(itemId, name) {
+        if (selectedItems.find((i) => i.item_id === itemId)) return;
+        if (selectedItems.length >= MAX_ITEMS) {
+          setStatus(`You can compare up to ${MAX_ITEMS} items at once.`, true);
+          return;
+        }
+        selectedItems.push({ item_id: itemId, name });
+        renderChips();
+        searchInput.value = "";
+        resultsEl.classList.remove("open");
+        await refreshChart();
+      }
+
+      async function removeItem(itemId) {
+        selectedItems = selectedItems.filter((i) => i.item_id !== itemId);
+        renderChips();
+        await refreshChart();
+      }
+
+      function filterByRange(series, rangeDays) {
+        if (rangeDays === "all") return series;
+        const cutoff = Date.now() - Number(rangeDays) * 24 * 60 * 60 * 1000;
+        return series.filter((d) => new Date(d.date).getTime() >= cutoff);
+      }
+
+      function metricUnit() {
+        return metric === "sb_price" ? "sb" : "g";
+      }
+
+      function metricLabel() {
+        return metric === "sb_price" ? "SB price" : "Gold price";
+      }
+
+      function buildDatasets(seriesByItem) {
+        return selectedItems.map((item, i) => {
+          const series = seriesByItem[item.item_id] || [];
+          const base = series.length ? series[0][metric] : null;
+          const points = series
+            .filter((d) => d[metric] != null)
+            .map((d) => ({
+              x: d.date,
+              y: mode === "pct" && base ? ((d[metric] - base) / base) * 100 : d[metric],
+            }));
+          return {
+            label: item.name,
+            data: points,
+            borderColor: PALETTE[i % PALETTE.length],
+            backgroundColor: PALETTE[i % PALETTE.length],
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          };
+        });
+      }
+
+      async function refreshChart() {
+        if (!selectedItems.length) {
+          emptyEl.style.display = "block";
+          if (chart) {
+            chart.destroy();
+            chart = null;
+          }
+          return;
+        }
+        emptyEl.style.display = "none";
+        setStatus("Loading…");
+        try {
+          const seriesByItem = {};
+          await Promise.all(
+            selectedItems.map(async (item) => {
+              const full = await fetchItemHistory(item.item_id);
+              seriesByItem[item.item_id] = filterByRange(full, rangeEl.value);
+            })
+          );
+
+          const datasets = buildDatasets(seriesByItem);
+
+          const yTitle = mode === "pct" ? "% change" : metricLabel();
+          const useLog = mode === "raw" && logScaleEl.checked;
+          const yScaleType = useLog ? "logarithmic" : "linear";
+
+          if (chart) {
+            chart.data.datasets = datasets;
+            chart.options.scales.y.type = yScaleType;
+            chart.options.scales.y.title.text = yTitle;
+            chart.update();
+          } else {
+            chart = new Chart(canvas, {
+              type: "line",
+              data: { datasets },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "nearest", axis: "x", intersect: false },
+                plugins: {
+                  legend: {
+                    labels: { color: "#e5e7eb", boxWidth: 12, usePointStyle: true },
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx) =>
+                        `${ctx.dataset.label}: ${
+                          mode === "pct"
+                            ? ctx.parsed.y.toFixed(1) + "%"
+                            : ctx.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 }) + metricUnit()
+                        }`,
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    type: "time",
+                    time: { unit: "week" },
+                    grid: { color: "#1f2937" },
+                    ticks: { color: "#94a3b8" },
+                  },
+                  y: {
+                    type: yScaleType,
+                    title: { display: true, text: yTitle, color: "#94a3b8" },
+                    grid: { color: "#1f2937" },
+                    ticks: { color: "#94a3b8" },
+                  },
+                },
+              },
+            });
+          }
+          setStatus("");
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      }
+
+      rangeEl.addEventListener("change", refreshChart);
+
+      metricEl.addEventListener("change", () => {
+        metric = metricEl.value;
+        refreshChart();
+      });
+
+      modeToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-mode]");
+        if (!btn) return;
+        mode = btn.dataset.mode;
+        [...modeToggle.children].forEach((c) => c.classList.toggle("active", c === btn));
+        logScaleLabel.style.display = mode === "raw" ? "inline-flex" : "none";
+        refreshChart();
+      });
+
+      logScaleEl.addEventListener("change", refreshChart);
+
+      async function loadDefaults() {
+        setStatus("Loading default items…");
+        try {
+          const results = await Promise.all(
+            DEFAULT_ITEM_IDS.map(async (itemId) => {
+              const res = await fetch(`${API_BASE}/items/${itemId}`);
+              if (!res.ok) throw new Error(`Failed to load item ${itemId} (${res.status})`);
+              const data = await res.json();
+              return { item_id: itemId, name: data.item_info.name };
+            })
+          );
+          selectedItems = results;
+          renderChips();
+          await refreshChart();
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      }
+
+      loadDefaults();
+    </script>
+  </body>
+</html>

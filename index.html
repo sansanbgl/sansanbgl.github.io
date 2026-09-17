@@ -3,14 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sansanbgl | Profile</title>
+    <meta name="description" content="Umar Hasan — Software Engineer specializing in web application development." />
+    <title>Umar Hasan | Software Engineer</title>
     <style>
       :root {
-        --bg: #0f172a;
+        --bg: #0b1120;
         --card: #111827;
+        --card-hover: #151f32;
         --text: #e5e7eb;
-        --muted: #9ca3af;
+        --muted: #94a3b8;
         --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
         --border: #1f2937;
       }
 
@@ -20,22 +23,61 @@
 
       body {
         margin: 0;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
         color: var(--text);
       }
 
       .container {
         max-width: 920px;
         margin: 0 auto;
-        padding: 2rem 1rem 3rem;
+        padding: 3rem 1.25rem 3.5rem;
       }
 
       .hero {
         background: rgba(17, 24, 39, 0.95);
         border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 2rem;
+        border-radius: 18px;
+        padding: 2.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        animation: fade-up 0.5s ease-out;
+      }
+
+      .avatar {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, var(--accent), #818cf8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0b1120;
+      }
+
+      .hero-text h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 4vw, 2.2rem);
+      }
+
+      .role {
+        margin-top: 0.35rem;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
+      }
+
+      .tagline {
+        margin-top: 0.6rem;
       }
 
       h1,
@@ -43,74 +85,129 @@
         margin: 0 0 0.75rem;
       }
 
-      h1 {
-        font-size: clamp(1.8rem, 4vw, 2.4rem);
-      }
-
       p {
         margin: 0;
         color: var(--muted);
-        line-height: 1.6;
-      }
-
-      .tagline {
-        margin-top: 0.5rem;
+        line-height: 1.65;
       }
 
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 1rem;
-        margin-top: 1rem;
+        margin-top: 1.25rem;
       }
 
       .card {
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 14px;
-        padding: 1.25rem;
+        padding: 1.4rem;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        animation: fade-up 0.5s ease-out backwards;
+      }
+
+      .card:hover {
+        background: var(--card-hover);
+        border-color: #334155;
+        transform: translateY(-2px);
+      }
+
+      .grid .card:nth-child(1) { animation-delay: 0.05s; }
+      .grid .card:nth-child(2) { animation-delay: 0.1s; }
+      .grid .card:nth-child(3) { animation-delay: 0.15s; }
+
+      .card h2 {
+        font-size: 1.05rem;
       }
 
       ul {
         margin: 0.75rem 0 0;
-        padding-left: 1rem;
+        padding-left: 0;
+        list-style: none;
         color: var(--muted);
       }
 
       li + li {
-        margin-top: 0.4rem;
+        margin-top: 0.5rem;
+      }
+
+      .skills li {
+        display: inline-block;
+        margin: 0 0.4rem 0.4rem 0;
+        padding: 0.3rem 0.7rem;
+        background: var(--accent-soft);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 999px;
+        color: var(--text);
+        font-size: 0.85rem;
       }
 
       .links a {
         color: var(--accent);
         text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
       }
 
       .links a:hover {
         text-decoration: underline;
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero {
+          flex-direction: column;
+          text-align: center;
+        }
       }
     </style>
   </head>
   <body>
     <main class="container">
       <section class="hero">
-        <h1>Hi, I’m sansanbgl 👋</h1>
-        <p class="tagline">
-          Welcome to my profile page. I build things on the web and keep learning one project at a time.
-        </p>
+        <div class="avatar" aria-hidden="true">UH</div>
+        <div class="hero-text">
+          <h1>Umar Hasan</h1>
+          <p class="role">Software Engineer · Web Applications</p>
+          <p class="tagline">
+            Currently supervising the APPS team at ITS, under Wakil Rektor Bidang II — building and
+            maintaining web applications that support the university.
+          </p>
+        </div>
       </section>
 
       <section class="grid">
         <article class="card">
           <h2>About</h2>
           <p>
-            I enjoy creating clean, useful interfaces and experimenting with modern frontend tools.
+            Software engineer focused on building reliable, well-crafted web applications. I lead the
+            APPS team at Institut Teknologi Sepuluh Nopember (ITS), reporting to Wakil Rektor Bidang II,
+            and enjoy solving problems end to end — from architecture to interface.
           </p>
         </article>
 
         <article class="card">
           <h2>Skills</h2>
-          <ul>
+          <ul class="skills">
             <li>HTML, CSS, JavaScript</li>
             <li>Responsive web design</li>
             <li>Git & GitHub workflows</li>
@@ -120,11 +217,20 @@
         <article class="card links">
           <h2>Links</h2>
           <ul>
-            <li><a href="https://github.com/sansanbgl" target="_blank" rel="noreferrer">GitHub</a></li>
-            <li><a href="mailto:you@example.com">Email</a></li>
+            <li><a href="https://github.com/sansanbgl" target="_blank" rel="noreferrer">GitHub ↗</a></li>
+            <li><a href="mailto:umarhasan@its.ac.id">umarhasan@its.ac.id</a></li>
+          </ul>
+        </article>
+
+        <article class="card links">
+          <h2>Side Projects</h2>
+          <ul>
+            <li><a href="markethunt-consumer.html">Markethunt Consumer ↗</a></li>
           </ul>
         </article>
       </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
     </main>
   </body>
 </html>
