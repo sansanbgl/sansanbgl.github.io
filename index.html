@@ -1,1 +1,130 @@
-Hello word
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sansanbgl | Profile</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --border: #1f2937;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      .hero {
+        background: rgba(17, 24, 39, 0.95);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 0.75rem;
+      }
+
+      h1 {
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .tagline {
+        margin-top: 0.5rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem;
+      }
+
+      ul {
+        margin: 0.75rem 0 0;
+        padding-left: 1rem;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 0.4rem;
+      }
+
+      .links a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .links a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <section class="hero">
+        <h1>Hi, I’m sansanbgl 👋</h1>
+        <p class="tagline">
+          Welcome to my profile page. I build things on the web and keep learning one project at a time.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>About</h2>
+          <p>
+            I enjoy creating clean, useful interfaces and experimenting with modern frontend tools.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2>Skills</h2>
+          <ul>
+            <li>HTML, CSS, JavaScript</li>
+            <li>Responsive web design</li>
+            <li>Git & GitHub workflows</li>
+          </ul>
+        </article>
+
+        <article class="card links">
+          <h2>Links</h2>
+          <ul>
+            <li><a href="https://github.com/sansanbgl" target="_blank" rel="noreferrer">GitHub</a></li>
+            <li><a href="mailto:you@example.com">Email</a></li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
