@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tic-tac-toe (X O) in the browser: play a friend or the computer." />
+    <title>Tic-Tac-Toe | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --o: #f472b6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .reset {
+        margin-left: auto;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .reset:hover {
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin: 1.25rem 0 1rem;
+        text-align: center;
+        font-weight: 600;
+        min-height: 1.4em;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        max-width: 360px;
+        margin: 0 auto;
+      }
+
+      .cell {
+        aspect-ratio: 1;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: clamp(2.2rem, 12vw, 3.5rem);
+        font-weight: 700;
+        color: var(--text);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      .cell:hover:not(:disabled) {
+        background: var(--card-hover);
+        border-color: #334155;
+      }
+
+      .cell:disabled {
+        cursor: default;
+      }
+
+      .cell.x {
+        color: var(--accent);
+      }
+
+      .cell.o {
+        color: var(--o);
+      }
+
+      .cell.win {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+      }
+
+      .scores {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+        text-align: center;
+      }
+
+      .scores div {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .scores strong {
+        display: block;
+        font-size: 1.3rem;
+        color: var(--text);
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Tic-Tac-Toe</h1>
+        <p>Classic X O. Play a friend on the same device, or take on the computer.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <div class="toggle-group" id="mode-toggle">
+            <button data-mode="cpu" class="active">vs Computer</button>
+            <button data-mode="pvp">2 Players</button>
+          </div>
+          <button id="reset" class="reset">New Game</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+        <div id="board" class="board"></div>
+
+        <div class="scores">
+          <div>X<strong id="score-x">0</strong></div>
+          <div>Draws<strong id="score-draw">0</strong></div>
+          <div id="label-o">O (CPU)<strong id="score-o">0</strong></div>
+        </div>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const LINES = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6],
+      ];
+
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+      const modeToggle = document.getElementById("mode-toggle");
+      const labelO = document.getElementById("label-o");
+      const scoreEls = {
+        X: document.getElementById("score-x"),
+        O: document.getElementById("score-o"),
+        draw: document.getElementById("score-draw"),
+      };
+
+      let board = Array(9).fill(null);
+      let turn = "X";
+      let mode = "cpu";
+      let over = false;
+      let scores = { X: 0, O: 0, draw: 0 };
+
+      const cells = Array.from({ length: 9 }, (_, i) => {
+        const btn = document.createElement("button");
+        btn.className = "cell";
+        btn.setAttribute("aria-label", `Cell ${i + 1}`);
+        btn.addEventListener("click", () => play(i));
+        boardEl.appendChild(btn);
+        return btn;
+      });
+
+      function winner(b) {
+        for (const line of LINES) {
+          const [a, c, d] = line;
+          if (b[a] && b[a] === b[c] && b[a] === b[d]) return { player: b[a], line };
+        }
+        return b.every(Boolean) ? { player: "draw" } : null;
+      }
+
+      // Minimax: the computer never loses.
+      function minimax(b, player) {
+        const result = winner(b);
+        if (result) {
+          if (result.player === "O") return { score: 1 };
+          if (result.player === "X") return { score: -1 };
+          return { score: 0 };
+        }
+        let best = { score: player === "O" ? -Infinity : Infinity };
+        b.forEach((v, i) => {
+          if (v) return;
+          b[i] = player;
+          const { score } = minimax(b, player === "O" ? "X" : "O");
+          b[i] = null;
+          if (player === "O" ? score > best.score : score < best.score) best = { score, index: i };
+        });
+        return best;
+      }
+
+      function render() {
+        const result = winner(board);
+        cells.forEach((cell, i) => {
+          cell.textContent = board[i] || "";
+          cell.className = "cell" + (board[i] ? " " + board[i].toLowerCase() : "");
+          cell.disabled = over || Boolean(board[i]) || (mode === "cpu" && turn === "O");
+          if (result && result.line && result.line.includes(i)) cell.classList.add("win");
+        });
+
+        if (result && result.player === "draw") statusEl.textContent = "It's a draw.";
+        else if (result) statusEl.textContent = `${result.player} wins!`;
+        else if (mode === "cpu" && turn === "O") statusEl.textContent = "Computer is thinking…";
+        else statusEl.textContent = `${turn}'s turn`;
+
+        Object.keys(scores).forEach((k) => (scoreEls[k].textContent = scores[k]));
+      }
+
+      function play(i) {
+        if (over || board[i]) return;
+        board[i] = turn;
+        const result = winner(board);
+        if (result) {
+          over = true;
+          scores[result.player]++;
+        } else {
+          turn = turn === "X" ? "O" : "X";
+        }
+        render();
+        if (!over && mode === "cpu" && turn === "O") {
+          setTimeout(() => play(minimax(board.slice(), "O").index), 350);
+        }
+      }
+
+      function newGame() {
+        board = Array(9).fill(null);
+        turn = "X";
+        over = false;
+        render();
+      }
+
+      modeToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.dataset.mode === mode) return;
+        mode = btn.dataset.mode;
+        modeToggle.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+        labelO.firstChild.textContent = mode === "cpu" ? "O (CPU)" : "O";
+        scores = { X: 0, O: 0, draw: 0 };
+        newGame();
+      });
+
+      document.getElementById("reset").addEventListener("click", newGame);
+
+      render();
+    </script>
+  </body>
+</html>
