@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Checkers (draughts) in the browser with forced captures, multi-jumps and kings." />
+    <title>Checkers | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --light-sq: #334155;
+        --dark-sq: #0f172a;
+        --p1: #fb7185;
+        --p2: #e5e7eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .reset {
+        margin-left: auto;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .reset:hover {
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin: 1.25rem 0 1rem;
+        text-align: center;
+        font-weight: 600;
+        min-height: 1.4em;
+      }
+
+      .status small {
+        display: block;
+        margin-top: 0.2rem;
+        font-weight: 400;
+        color: var(--muted);
+        min-height: 1.2em;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .sq {
+        position: relative;
+        aspect-ratio: 1;
+        background: var(--light-sq);
+        border: none;
+        padding: 0;
+      }
+
+      .sq.dark {
+        background: var(--dark-sq);
+      }
+
+      .sq.from,
+      .sq.trail {
+        background: #13304a;
+      }
+
+      .sq.target {
+        cursor: pointer;
+      }
+
+      .sq.target::after {
+        content: "";
+        position: absolute;
+        inset: 36%;
+        border-radius: 50%;
+        background: var(--accent);
+        opacity: 0.7;
+      }
+
+      .sq.target:hover::after {
+        inset: 30%;
+        opacity: 1;
+      }
+
+      .sq.movable {
+        cursor: pointer;
+      }
+
+      .piece {
+        position: absolute;
+        inset: 12%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: clamp(0.9rem, 4vw, 1.4rem);
+        color: #0b1120;
+        box-shadow: inset 0 -3px 0 rgba(2, 6, 23, 0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .piece.p1 {
+        background: var(--p1);
+      }
+
+      .piece.p2 {
+        background: var(--p2);
+      }
+
+      .sq.movable .piece {
+        box-shadow: inset 0 -3px 0 rgba(2, 6, 23, 0.35), 0 0 0 2px rgba(56, 189, 248, 0.55);
+      }
+
+      .sq.selected .piece {
+        transform: scale(1.08);
+        box-shadow: inset 0 -3px 0 rgba(2, 6, 23, 0.35), 0 0 0 3px var(--accent);
+      }
+
+      .piece.taken {
+        opacity: 0.25;
+      }
+
+      .scores {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+      }
+
+      .scores div {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .scores div.active {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+
+      .scores .swatch {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .scores strong {
+        margin-left: auto;
+        font-size: 1.1rem;
+        color: var(--text);
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Checkers</h1>
+        <p>Move diagonally and jump to capture. Captures are compulsory, and reaching the far row makes a king.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <div class="toggle-group" id="mode-toggle">
+            <button data-mode="cpu" class="active">vs Computer</button>
+            <button data-mode="pvp">2 Players</button>
+          </div>
+          <button id="reset" class="reset">New Game</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+        <div id="board" class="board"></div>
+
+        <div class="scores">
+          <div id="card-1"><span class="swatch" style="background: var(--p1)"></span><span id="label-1">You</span><strong id="left-1">12</strong></div>
+          <div id="card-2"><span class="swatch" style="background: var(--p2)"></span><span id="label-2">Computer</span><strong id="left-2">12</strong></div>
+        </div>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const SIZE = 8;
+      const DEPTH = 5;
+      const DRAW_PLIES = 80; // 40 moves each with no capture or man moved
+
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+      const modeToggle = document.getElementById("mode-toggle");
+
+      let board = []; // null or { p: 1 | 2, king }
+      let turn = 1; // 1 = red at the bottom, moves first
+      let over = false;
+      let winner = null;
+      let mode = "cpu";
+      let path = []; // squares chosen so far for the current move
+      let quiet = 0;
+      let note = "";
+      let gameId = 0;
+
+      const inBounds = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+      const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+      const names = () => (mode === "cpu" ? { 1: "You", 2: "Computer" } : { 1: "Red", 2: "White" });
+
+      const squares = [];
+      for (let r = 0; r < SIZE; r++) {
+        squares.push([]);
+        for (let c = 0; c < SIZE; c++) {
+          const el = document.createElement("button");
+          el.className = "sq";
+          el.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}`);
+          el.addEventListener("click", () => tap(r, c));
+          boardEl.appendChild(el);
+          squares[r].push(el);
+        }
+      }
+
+      function dirs(piece) {
+        const f = piece.p === 1 ? -1 : 1;
+        return piece.king ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : [[f, -1], [f, 1]];
+      }
+
+      const crownRow = (p) => (p === 1 ? 0 : SIZE - 1);
+
+      function collectJumps(b, piece, r, c, path, captured, out) {
+        let extended = false;
+        for (const [dr, dc] of dirs(piece)) {
+          const mr = r + dr;
+          const mc = c + dc;
+          const lr = r + 2 * dr;
+          const lc = c + 2 * dc;
+          if (!inBounds(lr, lc) || b[lr][lc]) continue;
+          const mid = b[mr][mc];
+          if (!mid || mid.p === piece.p || captured.some((x) => x[0] === mr && x[1] === mc)) continue;
+          extended = true;
+          const nextPath = [...path, [lr, lc]];
+          const nextCaptured = [...captured, [mr, mc]];
+          // A man that reaches the far row is crowned and its move ends there.
+          if (!piece.king && lr === crownRow(piece.p)) out.push({ path: nextPath, captured: nextCaptured });
+          else collectJumps(b, piece, lr, lc, nextPath, nextCaptured, out);
+        }
+        if (!extended && captured.length) out.push({ path, captured });
+      }
+
+      function legalMoves(b, p) {
+        const jumps = [];
+        const steps = [];
+        for (let r = 0; r < SIZE; r++)
+          for (let c = 0; c < SIZE; c++) {
+            const piece = b[r][c];
+            if (!piece || piece.p !== p) continue;
+            b[r][c] = null; // the jumping piece leaves its square
+            collectJumps(b, piece, r, c, [[r, c]], [], jumps);
+            b[r][c] = piece;
+            for (const [dr, dc] of dirs(piece)) {
+              if (inBounds(r + dr, c + dc) && !b[r + dr][c + dc]) steps.push({ path: [[r, c], [r + dr, c + dc]], captured: [] });
+            }
+          }
+        return jumps.length ? jumps : steps;
+      }
+
+      function applyMove(b, m) {
+        const nb = b.map((row) => row.map((x) => x && { ...x }));
+        const [sr, sc] = m.path[0];
+        const [er, ec] = m.path[m.path.length - 1];
+        const piece = nb[sr][sc];
+        nb[sr][sc] = null;
+        m.captured.forEach(([r, c]) => (nb[r][c] = null));
+        if (er === crownRow(piece.p)) piece.king = true;
+        nb[er][ec] = piece;
+        return nb;
+      }
+
+      // Positive scores favour the computer (player 2).
+      function evaluate(b) {
+        let score = 0;
+        for (let r = 0; r < SIZE; r++)
+          for (let c = 0; c < SIZE; c++) {
+            const x = b[r][c];
+            if (!x) continue;
+            const value = x.king ? 5 : 3 + 0.08 * (x.p === 2 ? r : SIZE - 1 - r);
+            score += x.p === 2 ? value : -value;
+          }
+        return score;
+      }
+
+      function minimax(b, depth, alpha, beta, p) {
+        const moves = legalMoves(b, p);
+        if (!moves.length) return p === 2 ? -1000 - depth : 1000 + depth;
+        if (depth === 0) return evaluate(b);
+        let best = p === 2 ? -Infinity : Infinity;
+        for (const m of moves) {
+          const score = minimax(applyMove(b, m), depth - 1, alpha, beta, 3 - p);
+          if (p === 2) {
+            best = Math.max(best, score);
+            alpha = Math.max(alpha, best);
+          } else {
+            best = Math.min(best, score);
+            beta = Math.min(beta, best);
+          }
+          if (alpha >= beta) break;
+        }
+        return best;
+      }
+
+      function bestMove() {
+        let best = [];
+        let bestScore = -Infinity;
+        for (const m of legalMoves(board, 2)) {
+          const score = minimax(applyMove(board, m), DEPTH - 1, -Infinity, Infinity, 1);
+          if (score > bestScore) {
+            bestScore = score;
+            best = [m];
+          } else if (score === bestScore) {
+            best.push(m);
+          }
+        }
+        return best[Math.floor(Math.random() * best.length)];
+      }
+
+      const matching = (moves) => moves.filter((m) => path.every((sq, i) => m.path[i] && same(m.path[i], sq)));
+
+      function render() {
+        const cpuTurn = mode === "cpu" && turn === 2;
+        const moves = over || cpuTurn ? [] : legalMoves(board, turn);
+        const candidates = path.length ? matching(moves) : [];
+        const targets = candidates.map((m) => m.path[path.length]).filter(Boolean);
+        const taken = candidates.length ? candidates[0].captured.slice(0, path.length - 1) : [];
+
+        // While a multi-jump is in progress, show the piece where it has got to.
+        let shown = board;
+        if (path.length > 1) {
+          shown = board.map((row) => row.slice());
+          shown[path[path.length - 1][0]][path[path.length - 1][1]] = board[path[0][0]][path[0][1]];
+          shown[path[0][0]][path[0][1]] = null;
+        }
+
+        for (let r = 0; r < SIZE; r++)
+          for (let c = 0; c < SIZE; c++) {
+            const el = squares[r][c];
+            const x = shown[r][c];
+            const here = [r, c];
+            let cls = "sq" + ((r + c) % 2 ? " dark" : "");
+            if (path.length && same(path[path.length - 1], here)) cls += " selected";
+            else if (path.some((sq) => same(sq, here))) cls += " trail";
+            if (targets.some((sq) => same(sq, here))) cls += " target";
+            if (!path.length && moves.some((m) => same(m.path[0], here))) cls += " movable";
+            el.className = cls;
+            const isTaken = taken.some((sq) => same(sq, here));
+            el.innerHTML = x ? `<span class="piece p${x.p}${isTaken ? " taken" : ""}">${x.king ? "♛" : ""}</span>` : "";
+          }
+
+        const nm = names();
+        let title;
+        if (over) title = winner ? (mode === "cpu" && winner === 1 ? "You win!" : `${nm[winner]} wins!`) : "Draw: 40 moves each with no progress.";
+        else if (cpuTurn) title = "Computer is thinking…";
+        else title = mode === "cpu" ? "Your turn" : `${nm[turn]}'s turn`;
+        const mustJump = !over && moves.length && moves[0].captured.length;
+        statusEl.innerHTML = `${title}<small>${note || (mustJump ? "You must capture." : "")}</small>`;
+
+        const left = (p) => board.flat().filter((x) => x && x.p === p).length;
+        document.getElementById("label-1").textContent = nm[1];
+        document.getElementById("label-2").textContent = nm[2];
+        document.getElementById("left-1").textContent = left(1);
+        document.getElementById("left-2").textContent = left(2);
+        document.getElementById("card-1").classList.toggle("active", !over && turn === 1);
+        document.getElementById("card-2").classList.toggle("active", !over && turn === 2);
+      }
+
+      function commit(m) {
+        const piece = board[m.path[0][0]][m.path[0][1]];
+        quiet = m.captured.length || !piece.king ? 0 : quiet + 1;
+        board = applyMove(board, m);
+        path = [];
+        note = m.captured.length > 1 ? `${m.captured.length} pieces captured!` : "";
+        turn = 3 - turn;
+
+        if (!legalMoves(board, turn).length) {
+          over = true;
+          winner = 3 - turn;
+        } else if (quiet >= DRAW_PLIES) {
+          over = true;
+        }
+        render();
+
+        if (!over && mode === "cpu" && turn === 2) {
+          const id = gameId;
+          setTimeout(() => {
+            if (id === gameId) commit(bestMove());
+          }, 500);
+        }
+      }
+
+      function tap(r, c) {
+        if (over || (mode === "cpu" && turn === 2)) return;
+        const moves = legalMoves(board, turn);
+        const here = [r, c];
+
+        if (path.length) {
+          const candidates = matching(moves);
+          const next = candidates.filter((m) => m.path[path.length] && same(m.path[path.length], here));
+          if (next.length) {
+            path.push(here);
+            const done = next.find((m) => m.path.length === path.length);
+            if (done) commit(done);
+            else render();
+            return;
+          }
+          if (path.length > 1) return; // finish the jump you started
+        }
+
+        path = moves.some((m) => same(m.path[0], here)) && !(path.length && same(path[0], here)) ? [here] : [];
+        render();
+      }
+
+      function newGame() {
+        gameId++;
+        board = Array.from({ length: SIZE }, (_, r) =>
+          Array.from({ length: SIZE }, (_, c) => {
+            if ((r + c) % 2 === 0) return null;
+            if (r < 3) return { p: 2, king: false };
+            if (r > 4) return { p: 1, king: false };
+            return null;
+          })
+        );
+        turn = 1;
+        over = false;
+        winner = null;
+        path = [];
+        quiet = 0;
+        note = "";
+        render();
+      }
+
+      modeToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.dataset.mode === mode) return;
+        mode = btn.dataset.mode;
+        modeToggle.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+        newGame();
+      });
+
+      document.getElementById("reset").addEventListener("click", newGame);
+
+      newGame();
+    </script>
+  </body>
+</html>

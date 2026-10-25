@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ludo in the browser: 2 to 4 players, with optional computer opponents." />
+    <title>Ludo | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --red: #fb7185;
+        --green: #34d399;
+        --yellow: #fbbf24;
+        --blue: #38bdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .reset {
+        margin-left: auto;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .reset:hover {
+        border-color: var(--accent);
+      }
+
+      .board-wrap {
+        position: relative;
+        aspect-ratio: 1;
+        margin-top: 1.25rem;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .board-wrap svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .token {
+        position: absolute;
+        width: 4.8%;
+        height: 4.8%;
+        padding: 0;
+        border-radius: 50%;
+        border: 2px solid #020617;
+        box-shadow: 0 0 0 1.5px rgba(229, 231, 235, 0.85);
+        transform: translate(-50%, -50%);
+        transition: left 0.14s ease, top 0.14s ease;
+        cursor: default;
+      }
+
+      .token.movable {
+        cursor: pointer;
+        z-index: 2;
+        animation: pulse 0.9s ease-in-out infinite;
+      }
+
+      .turn-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.25rem;
+      }
+
+      .die {
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3.2rem;
+        line-height: 1;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+
+      .die.rolling {
+        animation: shake 0.4s ease;
+      }
+
+      .status {
+        flex: 1;
+        font-weight: 600;
+      }
+
+      .status small {
+        display: block;
+        margin-top: 0.2rem;
+        font-weight: 400;
+        color: var(--muted);
+      }
+
+      .roll {
+        background: var(--accent);
+        color: #0b1120;
+        border: none;
+        border-radius: 8px;
+        padding: 0.65rem 1.2rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .roll:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .players {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+      }
+
+      .player {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .player.active {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+
+      .player .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .player strong {
+        margin-left: auto;
+        color: var(--text);
+        font-size: 0.8rem;
+      }
+
+      .rules {
+        margin: 1rem 0 0;
+        padding-left: 1.1rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @keyframes pulse {
+        50% {
+          box-shadow: 0 0 0 4px var(--text);
+        }
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: rotate(0); }
+        25% { transform: rotate(-18deg); }
+        75% { transform: rotate(18deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Ludo</h1>
+        <p>Race all four of your tokens around the board and into your home before anyone else.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <span>Players</span>
+          <div class="toggle-group" id="count-toggle">
+            <button data-count="2" class="active">2</button>
+            <button data-count="3">3</button>
+            <button data-count="4">4</button>
+          </div>
+          <label><input type="checkbox" id="cpu" checked /> Computer plays others</label>
+          <button id="reset" class="reset">New Game</button>
+        </div>
+
+        <div class="board-wrap">
+          <svg id="board" viewBox="0 0 15 15" aria-hidden="true"></svg>
+          <div id="tokens"></div>
+        </div>
+
+        <div class="turn-row">
+          <div id="die" class="die" aria-live="polite">⚀</div>
+          <div id="status" class="status" aria-live="polite"></div>
+          <button id="roll" class="roll">Roll</button>
+        </div>
+
+        <div id="players" class="players"></div>
+
+        <ul class="rules">
+          <li>Roll a 6 to bring a token out. A 6, a capture or getting a token home earns another roll.</li>
+          <li>Land on an opponent to send them back to their base, except on starred and starting squares.</li>
+          <li>You need the exact number to reach home.</li>
+        </ul>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const ORDER = ["red", "green", "yellow", "blue"];
+      const LABELS = { red: "Red", green: "Green", yellow: "Yellow", blue: "Blue" };
+      const START = { red: 0, green: 13, yellow: 26, blue: 39 };
+      const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+      const BASE_ORIGIN = { red: [0, 0], green: [0, 9], yellow: [9, 9], blue: [9, 0] }; // [row, col]
+      const FINISH = { red: [6.9, 7.5], green: [7.5, 6.9], yellow: [8.1, 7.5], blue: [7.5, 8.1] }; // [x, y]
+      const LAST_TRACK = 50; // progress 0-50 is the shared track, 51-55 the home column, 56 home
+      const HOME = 56;
+      const DIE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+      const STACK_OFFSETS = [[0, 0], [-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]];
+
+      // The 52 squares of the shared track, clockwise from Red's start.
+      const TRACK = (() => {
+        const t = [];
+        const add = (r, c) => t.push([r, c]);
+        for (let c = 1; c <= 5; c++) add(6, c);
+        for (let r = 5; r >= 0; r--) add(r, 6);
+        add(0, 7);
+        for (let r = 0; r <= 5; r++) add(r, 8);
+        for (let c = 9; c <= 14; c++) add(6, c);
+        add(7, 14);
+        for (let c = 14; c >= 9; c--) add(8, c);
+        for (let r = 9; r <= 14; r++) add(r, 8);
+        add(14, 7);
+        for (let r = 14; r >= 9; r--) add(r, 6);
+        for (let c = 5; c >= 0; c--) add(8, c);
+        add(7, 0);
+        add(6, 0);
+        return t;
+      })();
+
+      const HOME_COLUMN = {
+        red: [1, 2, 3, 4, 5].map((c) => [7, c]),
+        green: [1, 2, 3, 4, 5].map((r) => [r, 7]),
+        yellow: [13, 12, 11, 10, 9].map((c) => [7, c]),
+        blue: [13, 12, 11, 10, 9].map((r) => [r, 7]),
+      };
+
+      const boardEl = document.getElementById("board");
+      const tokensEl = document.getElementById("tokens");
+      const dieEl = document.getElementById("die");
+      const statusEl = document.getElementById("status");
+      const rollBtn = document.getElementById("roll");
+      const playersEl = document.getElementById("players");
+      const countToggle = document.getElementById("count-toggle");
+      const cpuEl = document.getElementById("cpu");
+
+      let playerCount = 2;
+      let players = []; // { color, name, cpu, tokens: [progress], els }
+      let turn = 0;
+      let phase = "roll"; // roll | move | busy | over
+      let dice = 1;
+      let movable = [];
+      let message = "";
+      let gameId = 0;
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const colorVar = (color) => `var(--${color})`;
+      const trackIndex = (color, progress) => (START[color] + progress) % 52;
+
+      // Centre of a token's square, in board cells (x, y).
+      function coord(color, progress, i) {
+        if (progress < 0) {
+          const [r0, c0] = BASE_ORIGIN[color];
+          return [c0 + (i % 2 ? 4 : 2), r0 + (i < 2 ? 2 : 4)];
+        }
+        if (progress >= HOME) return FINISH[color];
+        const [r, c] = progress <= LAST_TRACK ? TRACK[trackIndex(color, progress)] : HOME_COLUMN[color][progress - LAST_TRACK - 1];
+        return [c + 0.5, r + 0.5];
+      }
+
+      function drawBoard() {
+        const parts = [`<rect width="15" height="15" fill="#0b1120" />`];
+        const cell = (r, c, fill, opacity = 1) =>
+          parts.push(`<rect x="${c}" y="${r}" width="1" height="1" fill="${fill}" fill-opacity="${opacity}" stroke="#1f2937" stroke-width="0.05" />`);
+
+        ORDER.forEach((color) => {
+          const [r0, c0] = BASE_ORIGIN[color];
+          parts.push(
+            `<rect x="${c0}" y="${r0}" width="6" height="6" fill="${colorVar(color)}" fill-opacity="0.75" />`,
+            `<rect x="${c0 + 1}" y="${r0 + 1}" width="4" height="4" rx="0.4" fill="#111827" />`
+          );
+          [0, 1, 2, 3].forEach((i) => {
+            const [x, y] = coord(color, -1, i);
+            parts.push(`<circle cx="${x}" cy="${y}" r="0.55" fill="none" stroke="${colorVar(color)}" stroke-width="0.12" />`);
+          });
+        });
+
+        TRACK.forEach(([r, c], i) => {
+          const owner = ORDER.find((color) => START[color] === i);
+          cell(r, c, owner ? colorVar(owner) : "#111827", owner ? 0.6 : 1);
+          if (SAFE.has(i) && !owner) {
+            parts.push(`<text x="${c + 0.5}" y="${r + 0.72}" font-size="0.62" text-anchor="middle" fill="#64748b">★</text>`);
+          }
+        });
+        ORDER.forEach((color) => HOME_COLUMN[color].forEach(([r, c]) => cell(r, c, colorVar(color), 0.6)));
+
+        const tri = (pts, color) => parts.push(`<polygon points="${pts}" fill="${colorVar(color)}" fill-opacity="0.85" />`);
+        tri("6,6 6,9 7.5,7.5", "red");
+        tri("6,6 9,6 7.5,7.5", "green");
+        tri("9,6 9,9 7.5,7.5", "yellow");
+        tri("6,9 9,9 7.5,7.5", "blue");
+
+        boardEl.innerHTML = parts.join("");
+      }
+
+      function placeTokens() {
+        // Spread out tokens that share a square.
+        const total = {};
+        const seen = {};
+        const keyOf = (p, progress, i) => coord(p.color, progress, i).join(",");
+        players.forEach((p) => p.tokens.forEach((progress, i) => {
+          const key = keyOf(p, progress, i);
+          total[key] = (total[key] || 0) + 1;
+        }));
+        players.forEach((p) =>
+          p.tokens.forEach((progress, i) => {
+            const [x, y] = coord(p.color, progress, i);
+            const key = keyOf(p, progress, i);
+            seen[key] = (seen[key] || 0) + 1;
+            const slot = total[key] > 1 ? 1 + ((seen[key] - 1) % 4) : 0;
+            const [dx, dy] = STACK_OFFSETS[slot];
+            const el = p.els[i];
+            el.style.left = `${((x + dx) / 15) * 100}%`;
+            el.style.top = `${((y + dy) / 15) * 100}%`;
+          })
+        );
+      }
+
+      function render() {
+        placeTokens();
+        const current = players[turn];
+        players.forEach((p, pi) =>
+          p.els.forEach((el, i) => {
+            const canTap = phase === "move" && pi === turn && !p.cpu && movable.includes(i);
+            el.classList.toggle("movable", canTap);
+            el.disabled = !canTap;
+          })
+        );
+
+        let title;
+        if (phase === "over") title = `${current.name} wins! 🎉`;
+        else if (phase === "move" && !current.cpu) title = `${current.name}: pick a token to move`;
+        else title = `${current.name}'s turn${current.cpu ? " (computer)" : ""}`;
+        statusEl.innerHTML = `${title}<small>${message || "&nbsp;"}</small>`;
+        statusEl.style.color = colorVar(current.color);
+        dieEl.style.color = colorVar(current.color);
+        rollBtn.disabled = phase !== "roll" || current.cpu;
+
+        playersEl.innerHTML = players
+          .map(
+            (p, i) => `<div class="player${i === turn && phase !== "over" ? " active" : ""}">
+              <span class="dot" style="background:${colorVar(p.color)}"></span>${p.name}
+              <strong>${p.tokens.filter((t) => t === HOME).length}/4 home</strong>
+            </div>`
+          )
+          .join("");
+      }
+
+      const canMove = (progress, roll) => (progress < 0 ? roll === 6 : progress + roll <= HOME);
+
+      // Opponent tokens sitting on a shared-track square.
+      function occupants(index, except) {
+        const out = [];
+        players.forEach((p, pi) => {
+          if (pi === except) return;
+          p.tokens.forEach((progress, i) => {
+            if (progress >= 0 && progress <= LAST_TRACK && trackIndex(p.color, progress) === index) out.push([pi, i]);
+          });
+        });
+        return out;
+      }
+
+      function cpuChoice() {
+        const p = players[turn];
+        let best = movable[0];
+        let bestScore = -Infinity;
+        for (const i of movable) {
+          const from = p.tokens[i];
+          const to = from < 0 ? 0 : from + dice;
+          let score = to * 0.5;
+          if (to === HOME) score += 100;
+          if (from < 0) score += 60;
+          if (to > LAST_TRACK && from <= LAST_TRACK) score += 30;
+          if (to <= LAST_TRACK) {
+            const index = trackIndex(p.color, to);
+            if (!SAFE.has(index) && occupants(index, turn).length) score += 80;
+            if (SAFE.has(index)) score += 15;
+            else {
+              // Is an opponent 1-6 squares behind the landing square?
+              const threatened = players.some(
+                (o, oi) =>
+                  oi !== turn &&
+                  o.tokens.some((op) => {
+                    if (op < 0 || op > LAST_TRACK) return false;
+                    const gap = (index - trackIndex(o.color, op) + 52) % 52;
+                    return gap >= 1 && gap <= 6;
+                  })
+              );
+              if (threatened) score -= 25;
+            }
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            best = i;
+          }
+        }
+        return best;
+      }
+
+      async function roll() {
+        if (phase !== "roll") return;
+        const id = gameId;
+        phase = "busy";
+        const p = players[turn];
+        dice = 1 + Math.floor(Math.random() * 6);
+
+        dieEl.classList.remove("rolling");
+        void dieEl.offsetWidth;
+        dieEl.classList.add("rolling");
+        dieEl.textContent = DIE_FACES[dice - 1];
+        message = `Rolled a ${dice}.`;
+        render();
+        await sleep(450);
+        if (id !== gameId) return;
+
+        movable = [0, 1, 2, 3].filter((i) => canMove(p.tokens[i], dice));
+        if (!movable.length) {
+          message = `Rolled a ${dice}. ${dice === 6 ? "No moves, but roll again." : "No moves possible."}`;
+          render();
+          await sleep(900);
+          if (id === gameId) endTurn(dice === 6);
+          return;
+        }
+
+        // Tokens that would land on the same square give the same move, so skip asking.
+        const distinct = new Set(movable.map((i) => p.tokens[i]));
+        if (p.cpu || distinct.size === 1) {
+          if (p.cpu) await sleep(450);
+          if (id === gameId) move(p.cpu ? cpuChoice() : movable[0]);
+          return;
+        }
+        phase = "move";
+        render();
+      }
+
+      async function move(i) {
+        const id = gameId;
+        phase = "busy";
+        const p = players[turn];
+        let bonus = dice === 6;
+
+        if (p.tokens[i] < 0) {
+          p.tokens[i] = 0;
+          message = `${p.name} brings a token out.`;
+          render();
+          await sleep(250);
+        } else {
+          for (let s = 0; s < dice; s++) {
+            p.tokens[i]++;
+            placeTokens();
+            await sleep(160);
+            if (id !== gameId) return;
+          }
+          message = `Rolled a ${dice}.`;
+        }
+
+        const progress = p.tokens[i];
+        if (progress <= LAST_TRACK) {
+          const index = trackIndex(p.color, progress);
+          if (!SAFE.has(index)) {
+            const hit = occupants(index, turn);
+            hit.forEach(([pi, ti]) => (players[pi].tokens[ti] = -1));
+            if (hit.length) {
+              bonus = true;
+              message = `${p.name} captures ${[...new Set(hit.map(([pi]) => players[pi].name))].join(" and ")}!`;
+            }
+          }
+        } else if (progress === HOME) {
+          bonus = true;
+          message = `${p.name} gets a token home!`;
+        }
+
+        if (p.tokens.every((t) => t === HOME)) {
+          phase = "over";
+          render();
+          return;
+        }
+        render();
+        await sleep(350);
+        if (id === gameId) endTurn(bonus);
+      }
+
+      function endTurn(again) {
+        if (again) message += " Roll again!";
+        else turn = (turn + 1) % players.length;
+        phase = "roll";
+        movable = [];
+        render();
+        if (players[turn].cpu) {
+          const id = gameId;
+          setTimeout(() => id === gameId && roll(), 700);
+        }
+      }
+
+      function colorsFor(count) {
+        if (count === 2) return ["red", "yellow"];
+        if (count === 3) return ["red", "green", "yellow"];
+        return ORDER;
+      }
+
+      function newGame() {
+        gameId++;
+        tokensEl.innerHTML = "";
+        players = colorsFor(playerCount).map((color, pi) => {
+          const cpu = cpuEl.checked && pi > 0;
+          const els = [0, 1, 2, 3].map((i) => {
+            const el = document.createElement("button");
+            el.className = "token";
+            el.style.background = colorVar(color);
+            el.setAttribute("aria-label", `${LABELS[color]} token ${i + 1}`);
+            el.addEventListener("click", () => {
+              if (phase === "move" && turn === pi && movable.includes(i)) move(i);
+            });
+            tokensEl.appendChild(el);
+            return el;
+          });
+          return { color, name: cpu ? `${LABELS[color]} (CPU)` : LABELS[color], cpu, tokens: [-1, -1, -1, -1], els };
+        });
+        turn = 0;
+        phase = "roll";
+        movable = [];
+        message = "";
+        dieEl.textContent = DIE_FACES[0];
+        render();
+      }
+
+      countToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        playerCount = +btn.dataset.count;
+        countToggle.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+        newGame();
+      });
+
+      cpuEl.addEventListener("change", newGame);
+      rollBtn.addEventListener("click", roll);
+      document.getElementById("reset").addEventListener("click", newGame);
+
+      drawBoard();
+      newGame();
+    </script>
+  </body>
+</html>

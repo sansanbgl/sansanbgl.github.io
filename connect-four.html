@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Connect Four in the browser: drop discs and get four in a row against a friend or the computer." />
+    <title>Connect Four | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --p1: #fb7185;
+        --p2: #fbbf24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .controls select {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .reset {
+        margin-left: auto;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .reset:hover {
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin: 1.25rem 0 1rem;
+        text-align: center;
+        font-weight: 600;
+        min-height: 1.4em;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        padding: 8px;
+        background: #1e3a5f;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .cell {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: #0b1120;
+        cursor: pointer;
+      }
+
+      .cell.hover {
+        background: #13203a;
+      }
+
+      .disc {
+        position: absolute;
+        inset: 6%;
+        border-radius: 50%;
+        display: none;
+      }
+
+      .p1 .disc,
+      .p2 .disc {
+        display: block;
+      }
+
+      .p1 .disc {
+        background: var(--p1);
+      }
+
+      .p2 .disc {
+        background: var(--p2);
+      }
+
+      .drop .disc {
+        animation: fall 0.35s ease-in;
+      }
+
+      .win .disc {
+        box-shadow: 0 0 0 3px #0b1120, 0 0 0 5px var(--text);
+      }
+
+      .scores {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+        text-align: center;
+      }
+
+      .scores div {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .scores strong {
+        display: block;
+        font-size: 1.3rem;
+        color: var(--text);
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @keyframes fall {
+        from {
+          transform: translateY(calc(var(--fall) * -118%));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Connect Four</h1>
+        <p>Drop discs into the columns. First to line up four in a row, in any direction, wins.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <div class="toggle-group" id="mode-toggle">
+            <button data-mode="cpu" class="active">vs Computer</button>
+            <button data-mode="pvp">2 Players</button>
+          </div>
+          <select id="level" aria-label="Difficulty">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+          <button id="reset" class="reset">New Game</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+        <div id="board" class="board"></div>
+
+        <div class="scores">
+          <div id="label-1">You<strong id="score-1">0</strong></div>
+          <div>Draws<strong id="score-draw">0</strong></div>
+          <div id="label-2">Computer<strong id="score-2">0</strong></div>
+        </div>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const ROWS = 6;
+      const COLS = 7;
+      const ORDER = [3, 2, 4, 1, 5, 0, 6]; // try the centre first, it prunes better
+      const DEPTH = { easy: 2, normal: 4, hard: 6 };
+      const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+      const modeToggle = document.getElementById("mode-toggle");
+      const levelEl = document.getElementById("level");
+      const scoreEls = {
+        1: document.getElementById("score-1"),
+        2: document.getElementById("score-2"),
+        draw: document.getElementById("score-draw"),
+      };
+
+      let board = [];
+      let turn = 1;
+      let over = false;
+      let last = null;
+      let winCells = [];
+      let mode = "cpu";
+      let scores = { 1: 0, 2: 0, draw: 0 };
+      let gameId = 0;
+
+      const cells = [];
+      for (let r = 0; r < ROWS; r++) {
+        cells.push([]);
+        for (let c = 0; c < COLS; c++) {
+          const el = document.createElement("div");
+          el.className = "cell";
+          el.innerHTML = '<span class="disc"></span>';
+          el.style.setProperty("--fall", r + 1);
+          el.addEventListener("click", () => play(c));
+          el.addEventListener("mouseenter", () => setHover(c));
+          boardEl.appendChild(el);
+          cells[r].push(el);
+        }
+      }
+      boardEl.addEventListener("mouseleave", () => setHover(null));
+
+      const names = () => (mode === "cpu" ? { 1: "You", 2: "Computer" } : { 1: "Red", 2: "Yellow" });
+
+      function setHover(col) {
+        cells.forEach((row) => row.forEach((el, c) => el.classList.toggle("hover", c === col && !over)));
+      }
+
+      function dropRow(b, c) {
+        for (let r = ROWS - 1; r >= 0; r--) if (!b[r][c]) return r;
+        return -1;
+      }
+
+      function findWin(b) {
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const p = b[r][c];
+            if (!p) continue;
+            for (const [dr, dc] of DIRS) {
+              const line = [0, 1, 2, 3].map((i) => [r + dr * i, c + dc * i]);
+              if (line.every(([rr, cc]) => rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS && b[rr][cc] === p)) {
+                return { player: p, cells: line };
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      const isFull = (b) => b[0].every(Boolean);
+
+      // Positive scores favour the computer (player 2).
+      function evaluate(b) {
+        let score = 0;
+        for (let r = 0; r < ROWS; r++) {
+          if (b[r][3] === 2) score += 3;
+          else if (b[r][3] === 1) score -= 3;
+        }
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            for (const [dr, dc] of DIRS) {
+              const er = r + dr * 3;
+              const ec = c + dc * 3;
+              if (er < 0 || er >= ROWS || ec < 0 || ec >= COLS) continue;
+              let mine = 0;
+              let theirs = 0;
+              for (let i = 0; i < 4; i++) {
+                const v = b[r + dr * i][c + dc * i];
+                if (v === 2) mine++;
+                else if (v === 1) theirs++;
+              }
+              if (mine && theirs) continue;
+              if (mine === 3) score += 5;
+              else if (mine === 2) score += 2;
+              if (theirs === 3) score -= 4;
+              else if (theirs === 2) score -= 1;
+            }
+          }
+        }
+        return score;
+      }
+
+      function minimax(b, depth, alpha, beta, maximizing) {
+        const win = findWin(b);
+        if (win) return win.player === 2 ? 100000 + depth : -100000 - depth;
+        if (isFull(b)) return 0;
+        if (depth === 0) return evaluate(b);
+
+        let best = maximizing ? -Infinity : Infinity;
+        for (const c of ORDER) {
+          const r = dropRow(b, c);
+          if (r < 0) continue;
+          b[r][c] = maximizing ? 2 : 1;
+          const score = minimax(b, depth - 1, alpha, beta, !maximizing);
+          b[r][c] = null;
+          if (maximizing) {
+            best = Math.max(best, score);
+            alpha = Math.max(alpha, best);
+          } else {
+            best = Math.min(best, score);
+            beta = Math.min(beta, best);
+          }
+          if (alpha >= beta) break;
+        }
+        return best;
+      }
+
+      function bestMove() {
+        const open = ORDER.filter((c) => dropRow(board, c) >= 0);
+        const level = levelEl.value;
+        if (level === "easy" && Math.random() < 0.35) return open[Math.floor(Math.random() * open.length)];
+
+        let bestScore = -Infinity;
+        let bestCol = open[0];
+        for (const c of open) {
+          const r = dropRow(board, c);
+          board[r][c] = 2;
+          const score = minimax(board, DEPTH[level] - 1, -Infinity, Infinity, false);
+          board[r][c] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            bestCol = c;
+          }
+        }
+        return bestCol;
+      }
+
+      function render() {
+        const isWin = (r, c) => winCells.some(([wr, wc]) => wr === r && wc === c);
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const v = board[r][c];
+            let cls = "cell" + (v ? " p" + v : "");
+            if (last && last[0] === r && last[1] === c) cls += " drop";
+            if (isWin(r, c)) cls += " win";
+            if (cells[r][c].classList.contains("hover")) cls += " hover";
+            cells[r][c].className = cls;
+          }
+        }
+
+        const n = names();
+        const winner = winCells.length ? board[winCells[0][0]][winCells[0][1]] : null;
+        if (winner) statusEl.textContent = mode === "cpu" && winner === 1 ? "You win!" : `${n[winner]} wins!`;
+        else if (over) statusEl.textContent = "It's a draw.";
+        else if (mode === "cpu" && turn === 2) statusEl.textContent = "Computer is thinking…";
+        else statusEl.textContent = mode === "cpu" ? "Your turn" : `${n[turn]}'s turn`;
+        statusEl.style.color = over && !winner ? "var(--text)" : `var(--p${winner || turn})`;
+
+        document.getElementById("label-1").firstChild.textContent = n[1];
+        document.getElementById("label-2").firstChild.textContent = n[2];
+        Object.keys(scores).forEach((k) => (scoreEls[k].textContent = scores[k]));
+      }
+
+      function play(c, byCpu = false) {
+        if (over || (mode === "cpu" && turn === 2 && !byCpu)) return;
+        const r = dropRow(board, c);
+        if (r < 0) return;
+
+        board[r][c] = turn;
+        last = [r, c];
+        const win = findWin(board);
+        if (win) {
+          over = true;
+          winCells = win.cells;
+          scores[win.player]++;
+        } else if (isFull(board)) {
+          over = true;
+          scores.draw++;
+        } else {
+          turn = 3 - turn;
+        }
+        if (over) setHover(null);
+        render();
+
+        if (!over && mode === "cpu" && turn === 2) {
+          const id = gameId;
+          setTimeout(() => {
+            if (id === gameId) play(bestMove(), true);
+          }, 450);
+        }
+      }
+
+      function newGame() {
+        gameId++;
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        turn = 1;
+        over = false;
+        last = null;
+        winCells = [];
+        render();
+      }
+
+      modeToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.dataset.mode === mode) return;
+        mode = btn.dataset.mode;
+        modeToggle.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+        levelEl.style.display = mode === "cpu" ? "" : "none";
+        scores = { 1: 0, 2: 0, draw: 0 };
+        newGame();
+      });
+
+      levelEl.addEventListener("change", newGame);
+      document.getElementById("reset").addEventListener("click", newGame);
+
+      newGame();
+    </script>
+  </body>
+</html>

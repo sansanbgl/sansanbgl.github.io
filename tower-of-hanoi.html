@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tower of Hanoi puzzle in the browser: move the whole stack to the last peg in as few moves as possible." />
+    <title>Tower of Hanoi | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .controls select {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+      }
+
+      .btn {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .btn:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .btn.push {
+        margin-left: auto;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+        text-align: center;
+      }
+
+      .stats div {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .stats strong {
+        display: block;
+        font-size: 1.3rem;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pegs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+      }
+
+      .peg {
+        position: relative;
+        height: 260px;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: center;
+        padding: 0 0.25rem 12px;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+
+      .peg:hover {
+        background: var(--card-hover);
+      }
+
+      .peg:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .peg.source {
+        border-color: var(--accent);
+      }
+
+      .peg.invalid {
+        border-color: var(--danger);
+        animation: nudge 0.3s ease;
+      }
+
+      /* The rod and the base. */
+      .peg::before {
+        content: "";
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        width: 6px;
+        height: 82%;
+        transform: translateX(-50%);
+        background: #334155;
+        border-radius: 3px 3px 0 0;
+      }
+
+      .peg::after {
+        content: "";
+        position: absolute;
+        bottom: 6px;
+        left: 8%;
+        right: 8%;
+        height: 6px;
+        background: #334155;
+        border-radius: 3px;
+      }
+
+      .peg .label {
+        position: absolute;
+        top: 0.5rem;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .disc {
+        position: relative;
+        z-index: 1;
+        height: 22px;
+        border-radius: 6px;
+        border: 1px solid rgba(2, 6, 23, 0.6);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .disc.lifted {
+        transform: translateY(-14px);
+        box-shadow: 0 6px 14px rgba(56, 189, 248, 0.35);
+      }
+
+      .status {
+        margin-top: 1rem;
+        text-align: center;
+        font-weight: 600;
+        min-height: 1.4em;
+      }
+
+      .status.win {
+        color: var(--accent);
+      }
+
+      .hint {
+        margin-top: 0.4rem;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @keyframes nudge {
+        0%, 100% { transform: translateX(0); }
+        30% { transform: translateX(-4px); }
+        70% { transform: translateX(4px); }
+      }
+
+      @media (max-width: 480px) {
+        .peg {
+          height: 210px;
+        }
+
+        .disc {
+          height: 17px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Tower of Hanoi</h1>
+        <p>Move the whole stack to the last peg. Only one disc at a time, and never a bigger disc on a smaller one.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <label for="count">Discs</label>
+          <select id="count">
+            <option>3</option>
+            <option selected>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+          </select>
+          <button id="undo" class="btn push">Undo</button>
+          <button id="solve" class="btn">Show Solution</button>
+          <button id="reset" class="btn">New Game</button>
+        </div>
+
+        <div class="stats">
+          <div>Moves<strong id="moves">0</strong></div>
+          <div>Best possible<strong id="best">15</strong></div>
+          <div>Time<strong id="time">0:00</strong></div>
+        </div>
+
+        <div id="pegs" class="pegs"></div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <p class="hint">Tap a peg to pick up its top disc, then tap where it goes. Keys 1, 2 and 3 work too.</p>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const COLORS = ["#38bdf8", "#818cf8", "#a78bfa", "#f472b6", "#fb7185", "#fb923c", "#fbbf24", "#34d399"];
+
+      const pegsEl = document.getElementById("pegs");
+      const countEl = document.getElementById("count");
+      const movesEl = document.getElementById("moves");
+      const bestEl = document.getElementById("best");
+      const timeEl = document.getElementById("time");
+      const statusEl = document.getElementById("status");
+      const undoBtn = document.getElementById("undo");
+      const solveBtn = document.getElementById("solve");
+
+      let count = 4;
+      let pegs = [[], [], []]; // each peg lists disc sizes bottom to top
+      let history = []; // [from, to]
+      let selected = null;
+      let won = false;
+      let autoSolved = false;
+      let startTime = null;
+      let timer = null;
+      let solveRun = 0; // bumping this cancels a running solution
+
+      const pegEls = [0, 1, 2].map((i) => {
+        const el = document.createElement("div");
+        el.className = "peg";
+        el.tabIndex = 0;
+        el.setAttribute("role", "button");
+        el.innerHTML = `<span class="label">${i + 1}</span>`;
+        el.addEventListener("click", () => tapPeg(i));
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            tapPeg(i);
+          }
+        });
+        pegsEl.appendChild(el);
+        return el;
+      });
+
+      function formatTime(ms) {
+        const s = Math.floor(ms / 1000);
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      }
+
+      function stopTimer() {
+        clearInterval(timer);
+        timer = null;
+      }
+
+      function startTimer() {
+        if (timer) return;
+        startTime = Date.now();
+        timer = setInterval(() => (timeEl.textContent = formatTime(Date.now() - startTime)), 250);
+      }
+
+      function render() {
+        pegEls.forEach((el, i) => {
+          el.querySelectorAll(".disc").forEach((d) => d.remove());
+          el.classList.toggle("source", selected === i);
+          pegs[i].forEach((size, j) => {
+            const disc = document.createElement("div");
+            disc.className = "disc";
+            disc.style.width = `${28 + (size / count) * 64}%`;
+            disc.style.background = COLORS[size - 1];
+            if (selected === i && j === pegs[i].length - 1) disc.classList.add("lifted");
+            el.appendChild(disc);
+          });
+        });
+
+        const best = 2 ** count - 1;
+        movesEl.textContent = history.length;
+        bestEl.textContent = best;
+        undoBtn.disabled = !history.length || won || solveRun % 2 === 1;
+
+        statusEl.classList.toggle("win", won);
+        if (won && autoSolved) {
+          statusEl.textContent = `That's the shortest solution: ${best} moves. Now try it yourself!`;
+        } else if (won) {
+          const time = formatTime(Date.now() - startTime);
+          statusEl.textContent =
+            history.length === best
+              ? `Perfect! Solved in ${best} moves (${time}).`
+              : `Solved in ${history.length} moves (${time}). The best possible is ${best}.`;
+        } else if (selected !== null) {
+          statusEl.textContent = `Picked up from peg ${selected + 1}. Where should it go?`;
+        } else {
+          statusEl.textContent = "";
+        }
+      }
+
+      function flashInvalid(i) {
+        const el = pegEls[i];
+        el.classList.remove("invalid");
+        void el.offsetWidth;
+        el.classList.add("invalid");
+        setTimeout(() => el.classList.remove("invalid"), 300);
+      }
+
+      function canMove(from, to) {
+        const disc = pegs[from][pegs[from].length - 1];
+        const top = pegs[to][pegs[to].length - 1];
+        return disc !== undefined && (top === undefined || disc < top);
+      }
+
+      function move(from, to) {
+        pegs[to].push(pegs[from].pop());
+        history.push([from, to]);
+        if (pegs[2].length === count) {
+          won = true;
+          stopTimer();
+        }
+      }
+
+      function tapPeg(i) {
+        if (won || solveRun % 2 === 1) return;
+        if (selected === null) {
+          if (pegs[i].length) selected = i;
+          else flashInvalid(i);
+        } else if (selected === i) {
+          selected = null;
+        } else if (canMove(selected, i)) {
+          startTimer();
+          move(selected, i);
+          selected = null;
+        } else {
+          flashInvalid(i);
+          statusEl.textContent = "A bigger disc can't go on a smaller one.";
+          return;
+        }
+        render();
+      }
+
+      function newGame() {
+        solveRun += solveRun % 2; // cancel a running solution
+        stopTimer();
+        count = +countEl.value;
+        pegs = [Array.from({ length: count }, (_, i) => count - i), [], []];
+        history = [];
+        selected = null;
+        won = false;
+        autoSolved = false;
+        timeEl.textContent = "0:00";
+        solveBtn.textContent = "Show Solution";
+        render();
+      }
+
+      function solution(n, from, to, via, out) {
+        if (n === 0) return out;
+        solution(n - 1, from, via, to, out);
+        out.push([from, to]);
+        return solution(n - 1, via, to, from, out);
+      }
+
+      async function showSolution() {
+        if (solveRun % 2 === 1) {
+          newGame();
+          return;
+        }
+        newGame();
+        const run = ++solveRun; // odd while running
+        autoSolved = true;
+        solveBtn.textContent = "Stop";
+        const delay = Math.max(90, 2400 / 2 ** count);
+        startTimer();
+        for (const [from, to] of solution(count, 0, 2, 1, [])) {
+          await new Promise((r) => setTimeout(r, delay));
+          if (run !== solveRun) return;
+          move(from, to);
+          render();
+        }
+        solveRun++;
+        solveBtn.textContent = "Show Solution";
+        render();
+      }
+
+      undoBtn.addEventListener("click", () => {
+        if (!history.length || won) return;
+        const [from, to] = history.pop();
+        pegs[from].push(pegs[to].pop());
+        selected = null;
+        render();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (["1", "2", "3"].includes(e.key)) tapPeg(+e.key - 1);
+        if (e.key === "Escape" && selected !== null) {
+          selected = null;
+          render();
+        }
+      });
+
+      countEl.addEventListener("change", newGame);
+      document.getElementById("reset").addEventListener("click", newGame);
+      solveBtn.addEventListener("click", showSolution);
+
+      newGame();
+    </script>
+  </body>
+</html>

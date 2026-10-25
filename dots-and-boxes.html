@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Dots and Boxes in the browser: draw lines, close boxes, and outscore a friend or the computer." />
+    <title>Dots and Boxes | Umar Hasan</title>
+    <style>
+      :root {
+        --bg: #0b1120;
+        --card: #111827;
+        --card-hover: #151f32;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: #1f2937;
+        --p1: #38bdf8;
+        --p1-soft: rgba(56, 189, 248, 0.18);
+        --p2: #f472b6;
+        --p2-soft: rgba(244, 114, 182, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.08), transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.08), transparent 40%),
+          linear-gradient(180deg, #020617 0%, var(--bg) 45%);
+        background-attachment: fixed;
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3.5rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .controls select {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toggle-group button {
+        background: #0b1120;
+        border: none;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .toggle-group button.active {
+        background: var(--accent);
+        color: #0b1120;
+        font-weight: 600;
+      }
+
+      .reset {
+        margin-left: auto;
+        background: #0b1120;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .reset:hover {
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin: 1.25rem 0 1rem;
+        text-align: center;
+        font-weight: 600;
+        min-height: 1.4em;
+      }
+
+      .board {
+        display: grid;
+        aspect-ratio: 1;
+        max-width: 420px;
+        margin: 0 auto;
+      }
+
+      .dot {
+        background: var(--text);
+        border-radius: 50%;
+        z-index: 2;
+      }
+
+      .line {
+        position: relative;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .line::after {
+        content: "";
+        position: absolute;
+        background: var(--border);
+        border-radius: 3px;
+        transition: background 0.15s ease;
+      }
+
+      .line.h::after {
+        left: -2px;
+        right: -2px;
+        top: 50%;
+        height: 6px;
+        transform: translateY(-50%);
+      }
+
+      .line.v::after {
+        top: -2px;
+        bottom: -2px;
+        left: 50%;
+        width: 6px;
+        transform: translateX(-50%);
+      }
+
+      .line:hover:not(:disabled)::after {
+        background: #475569;
+      }
+
+      .line:disabled {
+        cursor: default;
+      }
+
+      .line.p1::after {
+        background: var(--p1);
+      }
+
+      .line.p2::after {
+        background: var(--p2);
+      }
+
+      .line.last::after {
+        box-shadow: 0 0 0 2px rgba(229, 231, 235, 0.5);
+      }
+
+      .box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transition: background 0.2s ease;
+      }
+
+      .box.p1 {
+        background: var(--p1-soft);
+        color: var(--p1);
+      }
+
+      .box.p2 {
+        background: var(--p2-soft);
+        color: var(--p2);
+      }
+
+      .scores {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+        text-align: center;
+      }
+
+      .scores div {
+        background: #0b1120;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .scores div.active {
+        border-color: var(--accent);
+      }
+
+      .scores strong {
+        display: block;
+        font-size: 1.3rem;
+      }
+
+      .hint {
+        margin: 1rem 0 0;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav>
+        <a href="index.html">&larr; Umar Hasan</a>
+      </nav>
+
+      <header>
+        <h1>Dots and Boxes</h1>
+        <p>Take turns drawing lines between dots. Close a box to claim it and draw again. Most boxes wins.</p>
+      </header>
+
+      <section class="panel">
+        <div class="controls">
+          <div class="toggle-group" id="mode-toggle">
+            <button data-mode="cpu" class="active">vs Computer</button>
+            <button data-mode="pvp">2 Players</button>
+          </div>
+          <select id="size" aria-label="Board size">
+            <option value="3">3 × 3</option>
+            <option value="4" selected>4 × 4</option>
+            <option value="5">5 × 5</option>
+            <option value="6">6 × 6</option>
+          </select>
+          <button id="reset" class="reset">New Game</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+        <div id="board" class="board"></div>
+
+        <div class="scores">
+          <div id="card-1"><span id="label-1">You</span><strong id="score-1" style="color: var(--p1)">0</strong></div>
+          <div id="card-2"><span id="label-2">Computer</span><strong id="score-2" style="color: var(--p2)">0</strong></div>
+        </div>
+        <p class="hint">Tip: avoid drawing the third side of a box, or your opponent gets it.</p>
+      </section>
+
+      <footer>&copy; 2026 Umar Hasan</footer>
+    </main>
+
+    <script>
+      const boardEl = document.getElementById("board");
+      const statusEl = document.getElementById("status");
+      const modeToggle = document.getElementById("mode-toggle");
+      const sizeEl = document.getElementById("size");
+
+      let n = 4;
+      let state = null; // { h, v, boxes } with 0 = empty, 1 or 2 = player
+      let turn = 1;
+      let over = false;
+      let mode = "cpu";
+      let last = null;
+      let gameId = 0;
+      let lineEls = {};
+      let boxEls = [];
+
+      const names = () => (mode === "cpu" ? { 1: "You", 2: "Computer" } : { 1: "Player 1", 2: "Player 2" });
+      const key = (l) => `${l.t}-${l.r}-${l.c}`;
+
+      function sides(s, r, c) {
+        return !!s.h[r][c] + !!s.h[r + 1][c] + !!s.v[r][c] + !!s.v[r][c + 1];
+      }
+
+      function adjacent(l) {
+        const out = l.t === "h" ? [[l.r - 1, l.c], [l.r, l.c]] : [[l.r, l.c - 1], [l.r, l.c]];
+        return out.filter(([r, c]) => r >= 0 && r < n && c >= 0 && c < n);
+      }
+
+      function freeLines(s) {
+        const out = [];
+        s.h.forEach((row, r) => row.forEach((v, c) => !v && out.push({ t: "h", r, c })));
+        s.v.forEach((row, r) => row.forEach((v, c) => !v && out.push({ t: "v", r, c })));
+        return out;
+      }
+
+      // Draws a line and returns how many boxes it closed.
+      function apply(s, l, player) {
+        s[l.t][l.r][l.c] = player;
+        let made = 0;
+        for (const [r, c] of adjacent(l)) {
+          if (!s.boxes[r][c] && sides(s, r, c) === 4) {
+            s.boxes[r][c] = player;
+            made++;
+          }
+        }
+        return made;
+      }
+
+      const clone = (s) => ({ h: s.h.map((r) => r.slice()), v: s.v.map((r) => r.slice()), boxes: s.boxes.map((r) => r.slice()) });
+      const closes = (s, l) => adjacent(l).some(([r, c]) => sides(s, r, c) === 3);
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+      function cpuMove() {
+        const lines = freeLines(state);
+        const closing = lines.filter((l) => closes(state, l));
+        if (closing.length) return pick(closing);
+
+        const safe = lines.filter((l) => adjacent(l).every(([r, c]) => sides(state, r, c) < 2));
+        if (safe.length) return pick(safe);
+
+        // Every move hands something over: give away as few boxes as possible.
+        let best = [];
+        let bestCost = Infinity;
+        for (const l of lines) {
+          const s = clone(state);
+          apply(s, l, 2);
+          let cost = 0;
+          for (;;) {
+            const next = freeLines(s).find((x) => closes(s, x));
+            if (!next) break;
+            cost += apply(s, next, 1);
+          }
+          if (cost < bestCost) {
+            bestCost = cost;
+            best = [l];
+          } else if (cost === bestCost) {
+            best.push(l);
+          }
+        }
+        return pick(best);
+      }
+
+      function build() {
+        boardEl.innerHTML = "";
+        lineEls = {};
+        boxEls = Array.from({ length: n }, () => []);
+        const tracks = Array.from({ length: 2 * n + 1 }, (_, i) => (i % 2 ? "1fr" : "12px")).join(" ");
+        boardEl.style.gridTemplateColumns = tracks;
+        boardEl.style.gridTemplateRows = tracks;
+
+        for (let i = 0; i <= 2 * n; i++) {
+          for (let j = 0; j <= 2 * n; j++) {
+            let el;
+            if (i % 2 === 0 && j % 2 === 0) {
+              el = document.createElement("div");
+              el.className = "dot";
+            } else if (i % 2 === 1 && j % 2 === 1) {
+              el = document.createElement("div");
+              el.className = "box";
+              boxEls[(i - 1) / 2][(j - 1) / 2] = el;
+            } else {
+              const l = i % 2 === 0 ? { t: "h", r: i / 2, c: (j - 1) / 2 } : { t: "v", r: (i - 1) / 2, c: j / 2 };
+              el = document.createElement("button");
+              el.className = `line ${l.t}`;
+              el.setAttribute("aria-label", l.t === "h" ? "Horizontal line" : "Vertical line");
+              el.addEventListener("click", () => play(l));
+              lineEls[key(l)] = el;
+            }
+            boardEl.appendChild(el);
+          }
+        }
+      }
+
+      function score(p) {
+        return state.boxes.flat().filter((b) => b === p).length;
+      }
+
+      function render() {
+        const cpuTurn = mode === "cpu" && turn === 2;
+        const nm = names();
+        for (const t of ["h", "v"]) {
+          state[t].forEach((row, r) =>
+            row.forEach((v, c) => {
+              const el = lineEls[key({ t, r, c })];
+              el.className = `line ${t}` + (v ? ` p${v}` : "") + (last && key(last) === key({ t, r, c }) ? " last" : "");
+              el.disabled = Boolean(v) || over || cpuTurn;
+            })
+          );
+        }
+        state.boxes.forEach((row, r) =>
+          row.forEach((v, c) => {
+            boxEls[r][c].className = "box" + (v ? ` p${v}` : "");
+            boxEls[r][c].textContent = v ? (mode === "cpu" ? (v === 1 ? "You" : "CPU") : `P${v}`) : "";
+          })
+        );
+
+        const s1 = score(1);
+        const s2 = score(2);
+        if (over) {
+          if (s1 === s2) statusEl.textContent = "It's a tie!";
+          else {
+            const w = s1 > s2 ? 1 : 2;
+            statusEl.textContent = mode === "cpu" && w === 1 ? "You win!" : `${nm[w]} wins!`;
+          }
+          statusEl.style.color = s1 === s2 ? "var(--text)" : `var(--p${s1 > s2 ? 1 : 2})`;
+        } else {
+          statusEl.textContent = cpuTurn ? "Computer is thinking…" : mode === "cpu" ? "Your turn" : `${nm[turn]}'s turn`;
+          statusEl.style.color = `var(--p${turn})`;
+        }
+
+        document.getElementById("label-1").textContent = nm[1];
+        document.getElementById("label-2").textContent = nm[2];
+        document.getElementById("score-1").textContent = s1;
+        document.getElementById("score-2").textContent = s2;
+        document.getElementById("card-1").classList.toggle("active", !over && turn === 1);
+        document.getElementById("card-2").classList.toggle("active", !over && turn === 2);
+      }
+
+      function play(l, byCpu = false) {
+        if (over || state[l.t][l.r][l.c] || (mode === "cpu" && turn === 2 && !byCpu)) return;
+        const made = apply(state, l, turn);
+        last = l;
+        if (state.boxes.flat().every(Boolean)) over = true;
+        else if (!made) turn = 3 - turn;
+        render();
+
+        if (!over && mode === "cpu" && turn === 2) {
+          const id = gameId;
+          setTimeout(() => {
+            if (id === gameId) play(cpuMove(), true);
+          }, 450);
+        }
+      }
+
+      function newGame() {
+        gameId++;
+        n = +sizeEl.value;
+        state = {
+          h: Array.from({ length: n + 1 }, () => Array(n).fill(0)),
+          v: Array.from({ length: n }, () => Array(n + 1).fill(0)),
+          boxes: Array.from({ length: n }, () => Array(n).fill(0)),
+        };
+        turn = 1;
+        over = false;
+        last = null;
+        build();
+        render();
+      }
+
+      modeToggle.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.dataset.mode === mode) return;
+        mode = btn.dataset.mode;
+        modeToggle.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+        newGame();
+      });
+
+      sizeEl.addEventListener("change", newGame);
+      document.getElementById("reset").addEventListener("click", newGame);
+
+      newGame();
+    </script>
+  </body>
+</html>
